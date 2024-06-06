@@ -17,7 +17,7 @@ m1 = []#[(22,20),(21,20),(20,20)]#[(0,0),(1,0),(2,0),(2,-1),(1,-2)]
 processed = []
 m2 = []
 timesincelastupdate = 0
-updatefreq = 2#1/20
+updatefreq = 1/20
 
 def getsurround(pos):
     return (

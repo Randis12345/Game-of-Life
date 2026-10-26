@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <unordered_set>
 #include <unordered_map>
+#include <fstream>
 #include <cmath>
 
 struct point{
@@ -88,11 +89,16 @@ void scroll(const int deltawheel){
 
 }
 
-int main()
-{	
-	points.insert(point({0,0}));	
-	points.insert(point({1,0}));
-	points.insert(point({2,0}));
+int main(int argc, char* argv[]){	
+  if (argc > 1) {
+        std::ifstream file(argv[1]);
+        if (!file.is_open())  return 1;
+        int x, y;
+        while (file >> x >> y) {
+          points.insert({x, y});
+        }
+  }
+
 	sf::RenderWindow window(sf::VideoMode(600, 600), "GOL");
 	sf::Clock Clock;
   sf::Vector2i lastmousepos;

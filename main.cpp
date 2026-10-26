@@ -24,7 +24,9 @@ struct point{
 struct pointhash {
     std::size_t operator()(const point& p) const noexcept
     {	
-        return p.x + p.y*10;
+      std::size_t h1 = std::hash<int>{}(p.x);
+      std::size_t h2 = std::hash<int>{}(p.y);
+      return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
     }
 };
 
@@ -33,39 +35,39 @@ std::unordered_set<point,pointhash> points;
 std::unordered_set<point,pointhash> pointsnext;
 
 void update() {
-    std::unordered_map<point, int, pointhash> neighbor_counts;
+  std::unordered_map<point, int, pointhash> neighbor_counts;
+  
+  // establish candidates and their neighbour counts
+  for (const auto& p : points) {
+    neighbor_counts[p]; 
     
-    // establish candidates and their neighbour counts
-    for (const auto& p : points) {
-        neighbor_counts[p]; 
-        
-        const int x = p.x;
-        const int y = p.y;
-        neighbor_counts[{x - 1, y - 1}]++;
-        neighbor_counts[{x,     y - 1}]++;
-        neighbor_counts[{x + 1, y - 1}]++;
-        neighbor_counts[{x - 1, y    }]++;
-        neighbor_counts[{x + 1, y    }]++;
-        neighbor_counts[{x - 1, y + 1}]++;
-        neighbor_counts[{x,     y + 1}]++;
-        neighbor_counts[{x + 1, y + 1}]++;
-    }
+    const int x = p.x;
+    const int y = p.y;
+    neighbor_counts[{x - 1, y - 1}]++;
+    neighbor_counts[{x,     y - 1}]++;
+    neighbor_counts[{x + 1, y - 1}]++;
+    neighbor_counts[{x - 1, y    }]++;
+    neighbor_counts[{x + 1, y    }]++;
+    neighbor_counts[{x - 1, y + 1}]++;
+    neighbor_counts[{x,     y + 1}]++;
+    neighbor_counts[{x + 1, y + 1}]++;
+  }
 
-    // Generate next iter 
-    pointsnext.clear();
-    for (const auto& [p, count] : neighbor_counts) {
-        bool alive = points.find(p) != points.end();
-        if (alive) {
-            if (count == 2 || count == 3) {
-                pointsnext.insert(p);
-            }
-        } else {
-            if (count == 3) {
-                pointsnext.insert(p);
-            }
-        }
+  // Generate next iter 
+  pointsnext.clear();
+  for (const auto& [p, count] : neighbor_counts) {
+    bool alive = points.find(p) != points.end();
+    if (alive) {
+      if (count == 2 || count == 3) {
+        pointsnext.insert(p);
+      }
+    } else {
+      if (count == 3) {
+        pointsnext.insert(p);
+      }
     }
-    points = std::move(pointsnext);
+  }
+  points = std::move(pointsnext);
 }
 
 

@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -O3
 LDLIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
-TARGET = GameOfLife
+TARGET = gol 
 SRC = main.cpp
 OBJ = $(SRC:.cpp=.o)
 

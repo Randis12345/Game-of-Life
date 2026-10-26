@@ -1,4 +1,20 @@
+CXX = g++
+CXXFLAGS = -Wall -Wextra -std=c++17 -O3
+LDLIBS = -lsfml-graphics -lsfml-window -lsfml-system
 
-build: 
-	 g++ -c main.cpp
-	 g++ main.o -o Build/GameOfLife -lsfml-graphics -lsfml-window -lsfml-system
+TARGET = GameOfLife
+SRC = main.cpp
+OBJ = $(SRC:.cpp=.o)
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CXX) $^ $(LDLIBS) -o $@
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ) $(TARGET)

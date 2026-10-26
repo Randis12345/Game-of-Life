@@ -47,10 +47,10 @@ void gen_surround(point* out,const point& p){
 
 std::unordered_set<point,pointhash> points;
 
-unsigned int cellnum(const point& p){
+int cellnum(const point& p){
 	point surround[surround_len];
 	gen_surround(surround,p);
-	unsigned int num = 0;
+	int num = 0;
 	for (const auto& neighbour : surround){
 		num += (points.find(neighbour) != points.end());
 	}	
@@ -58,36 +58,44 @@ unsigned int cellnum(const point& p){
 }
 
 std::unordered_set<point,pointhash> pointsnext;
-std::unordered_set<point,pointhash> proccessed;
+std::unordered_set<point,pointhash> candidates;
 
-void processcell(const point& p){
-	if (proccessed.find(p) != points.end()) return;
-	proccessed.insert(p);
-	const bool alive = (points.find(p) != points.end());
-	const unsigned int numaround = cellnum(p);
-	if (
-       (
-         alive 
-         and ((numaround == 2) or (numaround == 3))
+void gen_candidates(){
+	for (auto p = points.begin(); p != points.end(); p++){
+			point surround[surround_len];
+			gen_surround(&surround[0],*p);
+      candidates.insert(*p);
+			for (const auto& neighbour : surround){
+        candidates.insert(neighbour);
+			}
+	}
+}
+
+void process_pointsnext(){
+	for (auto p = candidates.begin(); p != candidates.end(); p++){
+	  const bool alive = (points.find(*p) != points.end());
+	  const int numaround = cellnum(*p);
+	  if (
+         (
+           alive 
+           and ((numaround == 2) or (numaround == 3))
+         ) 
+         or (!alive and (numaround == 3))
        ) 
-       or (!alive and (numaround == 3))
-     ) 
-    pointsnext.insert(p);
+      pointsnext.insert(*p);
+	}
 }
 
 void update(){
-	for (auto p = points.begin(); p != points.end(); p++){
-			processcell(*p);
-			point surround[surround_len];
-			gen_surround(&surround[0],*p);
-			for (const auto& neighbour : surround){
-				processcell(neighbour);
-			}
-	}
+  gen_candidates();
+  process_pointsnext();
 	points = pointsnext;
 	pointsnext.clear();
-	proccessed.clear();
+	candidates.clear();
 }
+
+
+constexpr float step_time = 0.2;
 
 float zoom = 10;
 sf::RectangleShape pixel({zoom,zoom});
@@ -116,45 +124,47 @@ int main()
   bool paused = true;
   while (window.isOpen())
   {
-      sf::Event event;
-      while (window.pollEvent(event))
-      {
-          if (event.type == sf::Event::Closed)
+    sf::Event event;
+    while (window.pollEvent(event))
+    {
+      if (event.type == sf::Event::Closed)
               window.close();
-		if (event.type == sf::Event::MouseWheelMoved)
-			scroll(event.mouseWheel.delta);
-		if (event.type == sf::Event::KeyPressed && event.key.code==57)
-			paused = !paused;
-      }
-	mousepos = sf::Mouse::getPosition(window);
-		
-	if (Clock.getElapsedTime().asSeconds() > 0.2 && !paused){
-		update();
-		Clock.restart();
-	}
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && paused){
-    float x = (mousepos.x - camera.x)/zoom;
-    float y = (mousepos.y - camera.y)/zoom;
-    point newpoint({static_cast<int>(std::floor(x)),
-                    static_cast<int>(std::floor(y))});
-    points.insert(newpoint);
-	}
-	
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Right)){
-		if (dragging){
-			camera+= (mousepos-lastmousepos);
-		}
-		lastmousepos = mousepos;
-		dragging = true;
-	}else{
-		dragging = false;
-	}
-      window.clear();
-	for (auto p = points.begin(); p != points.end(); p++){
-		pixel.setPosition((*p).x*zoom + camera.x,(*p).y*zoom + camera.y);
-		window.draw(pixel);
-	}
-      window.display();
+		  if (event.type == sf::Event::MouseWheelMoved)
+		  	scroll(event.mouseWheel.delta);
+		  if (event.type == sf::Event::KeyPressed && event.key.code==57)
+		  	paused = !paused;
+    }
+	  mousepos = sf::Mouse::getPosition(window);
+	  	
+	  if (Clock.getElapsedTime().asSeconds() > step_time  && !paused){
+	  	update();
+	  	Clock.restart();
+	  }
+	  if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && paused){
+      float x = (mousepos.x - camera.x)/zoom;
+      float y = (mousepos.y - camera.y)/zoom;
+      point newpoint({static_cast<int>(std::floor(x)),
+                      static_cast<int>(std::floor(y))});
+      points.insert(newpoint);
+	  }
+	  
+	  if (sf::Mouse::isButtonPressed(sf::Mouse::Right)){
+	    if (dragging){
+	  	  camera += (mousepos-lastmousepos);
+	  	}
+	  	lastmousepos = mousepos;
+	  	dragging = true;
+	  }else{
+	  	dragging = false;
+	  }
+    
+    // Draw
+    window.clear();
+	  for (auto p = points.begin(); p != points.end(); p++){
+	  	pixel.setPosition((*p).x*zoom + camera.x,(*p).y*zoom + camera.y);
+	  	window.draw(pixel);
+	  }
+    window.display();
   }
   return 0;
 }

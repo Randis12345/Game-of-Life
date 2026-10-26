@@ -136,10 +136,29 @@ int main()
     
     // Draw
     window.clear();
-	  for (auto p = points.begin(); p != points.end(); p++){
-	  	pixel.setPosition((*p).x*zoom + camera.x,(*p).y*zoom + camera.y);
-	  	window.draw(pixel);
-	  }
+
+    sf::VertexArray vertices(sf::PrimitiveType::Quads, points.size() * 4);
+    std::size_t idx = 0;
+    for (const auto& p : points) {
+      float x1 = p.x * zoom + camera.x;
+      float y1 = p.y * zoom + camera.y;
+      float x2 = x1 + zoom;
+      float y2 = y1 + zoom;
+
+      vertices[idx + 0].position = sf::Vector2f(x1, y1);
+      vertices[idx + 1].position = sf::Vector2f(x2, y1);
+      vertices[idx + 2].position = sf::Vector2f(x2, y2);
+      vertices[idx + 3].position = sf::Vector2f(x1, y2);
+
+      vertices[idx + 0].color = sf::Color::White;
+      vertices[idx + 1].color = sf::Color::White;
+      vertices[idx + 2].color = sf::Color::White;
+      vertices[idx + 3].color = sf::Color::White;
+
+      idx += 4;
+    }   
+
+    window.draw(vertices);
     window.display();
   }
   return 0;

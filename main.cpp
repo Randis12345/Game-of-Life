@@ -1,7 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <unordered_set>
-#include <iostream>
-#include <typeinfo>
+#include <cmath>
 
 struct point{
 	int x;
@@ -29,28 +28,20 @@ struct point{
 struct pointhash {
     std::size_t operator()(const point& p) const noexcept
     {	
-		//std::cout << p.x << " " << p.y <<"\n";
         return p.x + p.y*10;
     }
 };
 
-const unsigned int surround_len = 8;
+constexpr size_t surround_len = 8;
 
 void gen_surround(point* out,const point& p){	
-	*out = (point({p.x-1,p.y-1}));
-	++out;
-	*out = (point({p.x,p.y-1}));
-	++out;
-	*out = (point({p.x+1,p.y-1}));
-	++out;
-	*out = (point({p.x-1,p.y}));  
-	++out;
-	*out = (point({p.x+1,p.y}));  
-	++out;
-	*out = (point({p.x-1,p.y+1}));
-	++out;
-	*out = (point({p.x,p.y+1}));  
-	++out;
+	*out++ = (point({p.x-1,p.y-1}));
+	*out++ = (point({p.x,p.y-1}));
+	*out++ = (point({p.x+1,p.y-1}));
+	*out++ = (point({p.x-1,p.y}));  
+	*out++ = (point({p.x+1,p.y}));  
+	*out++ = (point({p.x-1,p.y+1}));
+	*out++ = (point({p.x,p.y+1}));  
 	*out = (point({p.x+1,p.y+1}));
 }
 
@@ -58,10 +49,10 @@ std::unordered_set<point,pointhash> points;
 
 unsigned int cellnum(const point& p){
 	point surround[surround_len];
-	gen_surround(&surround[0],p);
+	gen_surround(surround,p);
 	unsigned int num = 0;
-	for (int i = 0; i < surround_len; i++){
-		num += (points.find(surround[i]) != points.end());
+	for (const auto& neighbour : surround){
+		num += (points.find(neighbour) != points.end());
 	}	
 	return num;
 }
@@ -74,7 +65,14 @@ void processcell(const point& p){
 	proccessed.insert(p);
 	const bool alive = (points.find(p) != points.end());
 	const unsigned int numaround = cellnum(p);
-	if ((alive and (numaround == 2) or (numaround == 3)) or (!alive and (numaround == 3))) pointsnext.insert(p);
+	if (
+       (
+         alive 
+         and ((numaround == 2) or (numaround == 3))
+       ) 
+       or (!alive and (numaround == 3))
+     ) 
+    pointsnext.insert(p);
 }
 
 void update(){
@@ -82,8 +80,8 @@ void update(){
 			processcell(*p);
 			point surround[surround_len];
 			gen_surround(&surround[0],*p);
-			for (int i = 0; i < surround_len; i++){
-				processcell(surround[i]);
+			for (const auto& neighbour : surround){
+				processcell(neighbour);
 			}
 	}
 	points = pointsnext;
@@ -106,18 +104,6 @@ void scroll(const int deltawheel){
 
 }
 
-void createnewpoint(){
-	float x = (mousepos.x - camera.x)/zoom;
-	float y = (mousepos.y - camera.y)/zoom;
-	if (x < 0) x-=1;
-	if (y < 0) y-=1;
-	point newpoint({int(x),int(y)});
-	points.insert(newpoint);
-	//std::cout << newpoint.x << " " << newpoint.y << "\n";
-
-};
-
-
 int main()
 {	
 	points.insert(point({0,0}));	
@@ -125,46 +111,50 @@ int main()
 	points.insert(point({2,0}));
 	sf::RenderWindow window(sf::VideoMode(600, 600), "GOL");
 	sf::Clock Clock;
-    sf::Vector2i lastmousepos;
-    bool dragging = false;
-    bool paused = true;
-    while (window.isOpen())
-    {
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                window.close();
-			if (event.type == sf::Event::MouseWheelMoved)
-				scroll(event.mouseWheel.delta);
-			if (event.type == sf::Event::KeyPressed && event.key.code==57)
-				paused = !paused;
-        }
-		mousepos = sf::Mouse::getPosition(window);
-			
-		if (Clock.getElapsedTime().asSeconds() > 0.2 && !paused){
-			update();
-			Clock.restart();
-		}
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && paused){
-			createnewpoint();
-		}
+  sf::Vector2i lastmousepos;
+  bool dragging = false;
+  bool paused = true;
+  while (window.isOpen())
+  {
+      sf::Event event;
+      while (window.pollEvent(event))
+      {
+          if (event.type == sf::Event::Closed)
+              window.close();
+		if (event.type == sf::Event::MouseWheelMoved)
+			scroll(event.mouseWheel.delta);
+		if (event.type == sf::Event::KeyPressed && event.key.code==57)
+			paused = !paused;
+      }
+	mousepos = sf::Mouse::getPosition(window);
 		
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Right)){
-			if (dragging){
-				camera+= (mousepos-lastmousepos);
-			}
-			lastmousepos = mousepos;
-			dragging = true;
-		}else{
-			dragging = false;
+	if (Clock.getElapsedTime().asSeconds() > 0.2 && !paused){
+		update();
+		Clock.restart();
+	}
+	if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && paused){
+    float x = (mousepos.x - camera.x)/zoom;
+    float y = (mousepos.y - camera.y)/zoom;
+    point newpoint({static_cast<int>(std::floor(x)),
+                    static_cast<int>(std::floor(y))});
+    points.insert(newpoint);
+	}
+	
+	if (sf::Mouse::isButtonPressed(sf::Mouse::Right)){
+		if (dragging){
+			camera+= (mousepos-lastmousepos);
 		}
-        window.clear();
-		for (auto p = points.begin(); p != points.end(); p++){
-			pixel.setPosition((*p).x*zoom + camera.x,(*p).y*zoom + camera.y);
-			window.draw(pixel);
-		}
-        window.display();
-    }
-    return 0;
+		lastmousepos = mousepos;
+		dragging = true;
+	}else{
+		dragging = false;
+	}
+      window.clear();
+	for (auto p = points.begin(); p != points.end(); p++){
+		pixel.setPosition((*p).x*zoom + camera.x,(*p).y*zoom + camera.y);
+		window.draw(pixel);
+	}
+      window.display();
+  }
+  return 0;
 }

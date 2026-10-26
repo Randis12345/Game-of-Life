@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <unordered_set>
+#include <unordered_map>
 #include <cmath>
 
 struct point{
@@ -18,11 +19,6 @@ struct point{
 		x += vec.x;
 		y += vec.y;
 	}
-	//bool operator!=(const point& other) const
-	//{	
-	//	return !operator==(other);
-	//}
-
 };
 
 struct pointhash {
@@ -32,66 +28,44 @@ struct pointhash {
     }
 };
 
-constexpr size_t surround_len = 8;
-
-void gen_surround(point* out,const point& p){	
-	*out++ = (point({p.x-1,p.y-1}));
-	*out++ = (point({p.x,p.y-1}));
-	*out++ = (point({p.x+1,p.y-1}));
-	*out++ = (point({p.x-1,p.y}));  
-	*out++ = (point({p.x+1,p.y}));  
-	*out++ = (point({p.x-1,p.y+1}));
-	*out++ = (point({p.x,p.y+1}));  
-	*out = (point({p.x+1,p.y+1}));
-}
 
 std::unordered_set<point,pointhash> points;
-
-int cellnum(const point& p){
-	point surround[surround_len];
-	gen_surround(surround,p);
-	int num = 0;
-	for (const auto& neighbour : surround){
-		num += (points.find(neighbour) != points.end());
-	}	
-	return num;
-}
-
 std::unordered_set<point,pointhash> pointsnext;
-std::unordered_set<point,pointhash> candidates;
 
-void gen_candidates(){
-	for (auto p = points.begin(); p != points.end(); p++){
-			point surround[surround_len];
-			gen_surround(&surround[0],*p);
-      candidates.insert(*p);
-			for (const auto& neighbour : surround){
-        candidates.insert(neighbour);
-			}
-	}
-}
+void update() {
+    std::unordered_map<point, int, pointhash> neighbor_counts;
+    
+    // establish candidates and their neighbour counts
+    for (const auto& p : points) {
+        neighbor_counts[p]; 
+        
+        const int x = p.x;
+        const int y = p.y;
+        neighbor_counts[{x - 1, y - 1}]++;
+        neighbor_counts[{x,     y - 1}]++;
+        neighbor_counts[{x + 1, y - 1}]++;
+        neighbor_counts[{x - 1, y    }]++;
+        neighbor_counts[{x + 1, y    }]++;
+        neighbor_counts[{x - 1, y + 1}]++;
+        neighbor_counts[{x,     y + 1}]++;
+        neighbor_counts[{x + 1, y + 1}]++;
+    }
 
-void process_pointsnext(){
-	for (auto p = candidates.begin(); p != candidates.end(); p++){
-	  const bool alive = (points.find(*p) != points.end());
-	  const int numaround = cellnum(*p);
-	  if (
-         (
-           alive 
-           and ((numaround == 2) or (numaround == 3))
-         ) 
-         or (!alive and (numaround == 3))
-       ) 
-      pointsnext.insert(*p);
-	}
-}
-
-void update(){
-  gen_candidates();
-  process_pointsnext();
-	points = pointsnext;
-	pointsnext.clear();
-	candidates.clear();
+    // Generate next iter 
+    pointsnext.clear();
+    for (const auto& [p, count] : neighbor_counts) {
+        bool alive = points.find(p) != points.end();
+        if (alive) {
+            if (count == 2 || count == 3) {
+                pointsnext.insert(p);
+            }
+        } else {
+            if (count == 3) {
+                pointsnext.insert(p);
+            }
+        }
+    }
+    points = std::move(pointsnext);
 }
 
 
